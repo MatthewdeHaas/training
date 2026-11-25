@@ -70,3 +70,27 @@ printf '\n## %s • %s\n%s\n\nDetails:\n%s\n\n---\n' \
   "$timestamp" "$session_type" "$summary" "$details" >> "$LOG_FILE"
 
 echo "logged -> $LOG_FILE"
+
+
+# Sync to git (the entry is already saved, so failures here only warn)
+repo_dir="${LOG_FILE:h}"
+if git -C "$repo_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git -C "$repo_dir" add -- "$LOG_FILE"
+  if git -C "$repo_dir" diff --cached --quiet -- "$LOG_FILE"; then
+    echo "git: nothing to commit"
+  else
+    commit_msg="log: ${session_type}: ${summary}"
+    # Commit only the log file, even if other files are staged
+    git -C "$repo_dir" commit -q -m "${commit_msg[1,72]}" -- "$LOG_FILE"
+    echo "git: committed"
+    if git -C "$repo_dir" push -q; then
+      echo "git: pushed"
+    else
+      echo "git: push failed (entry is committed locally)" >&2
+    fi
+  fi
+else
+  echo "git: $repo_dir is not a git repo, skipping" >&2
+fi
+
+
