@@ -1,6 +1,10 @@
+use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use time::{Date, macros::format_description, OffsetDateTime};
 use std::fmt;
+use std::str::FromStr;
+use training::{ file_writer, paths, db };
+use rusqlite::Connection;
 
 
 #[derive(Parser, Debug)]
@@ -95,6 +99,46 @@ enum MealType {
     Snack
 }
 
+struct FoodEntry {
+    meal_type: MealType,
+    kcal: i32,
+    meal_name: String,
+    details: Option<String>
+}
+
+
+impl file_writer::LogEntry for FoodEntry {
+    fn to_markdown(&self) -> String {
+        format!(
+            "\n## {} · {} · {} kcal\n\
+             {}\n\
+             \n\
+             Details:\n\
+             {}\n\
+             \n\
+             ---\n",
+            OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()).date(),
+            self.meal_type,
+            self.kcal,
+            self.meal_name,
+            self.details.as_deref().unwrap_or("(No details)"),
+        )
+    }
+
+    fn save_to_db(&self, conn: &Connection) -> Result<()> {
+        conn.execute(
+            "INSERT INTO food (meal_type, kcal, meal_name, details) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![
+                self.meal_type.to_string(),
+                self.kcal,
+                self.meal_name,
+                self.details
+            ]
+        )?;
+        Ok(())
+    }
+}
+
 impl fmt::Display for MealType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -102,6 +146,20 @@ impl fmt::Display for MealType {
             MealType::Lunch => { write!(f, "lunch") }
             MealType::Dinner => { write!(f, "dinner") }
             MealType::Snack => { write!(f, "snack") }
+        }
+    }
+}
+
+impl FromStr for MealType {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+           "breakfast" | "b" => Ok(MealType::Breakfast),
+            "lunch" | "l" => Ok(MealType::Lunch),
+            "dinner" | "d" => Ok(MealType::Dinner),
+            "snack" | "s" => Ok(MealType::Snack),
+            _ => Err("Valid options: breakfast, lunch, dinner, snack")
         }
     }
 }
@@ -118,47 +176,66 @@ fn clamp_to_today(date: &Option<Date>) -> Date {
     date.map_or(today, |d| d.min(today))
 }
 
-fn main() {
-    let cli = Cli::parse();
-
-    match &cli.command {
+fn main() -> Result<()> {
+    let mut conn = db::init_db(&paths::db_path()?)?;
+    match Cli::parse().command {
         Commands::Add(AddArgs { meal_type: Some(meal_type), kcal: Some(kcal), meal_name: Some(meal_name), details }) => {
-            match &details {
-                Some(d) =>  println!("Logging {:?}: {} ({} kcal) - {}", meal_type, meal_name, kcal, d),
-                None => println!("Logging {:?}: {} ({} kcal)", meal_type, meal_name, kcal)
-            }
+            file_writer::add_log_entry(
+                FoodEntry { meal_type, kcal, meal_name, details }, 
+                paths::food_log_path,
+                &mut conn
+            )?;
+            Ok(())
         }
         Commands::Add(_) => {
-            println!("Starting interactive logger...");
+            file_writer::add_log_entry(
+                    FoodEntry { 
+                        meal_type: file_writer::parse_stdin("Enter the meal type (b, l, d, s)", true).unwrap(), 
+                        kcal: file_writer::parse_stdin("Enter number of kcal", true).unwrap(), 
+                        meal_name: file_writer::parse_stdin("Enter the name of meal", true).unwrap(), 
+                        details: file_writer::parse_stdin("Enter any details/notes on the meal", false)
+                    },
+                    paths::food_log_path,
+                    &mut conn
+            )?;
+            Ok(())
         }
         Commands::Day { date } => {
             println!("Summary for {}", date);
+            Ok(())
         }
         Commands::Today => {
             println!("Summary for today");
+            Ok(())
         }
         Commands::Week => {
             println!("Summary for this week starting from Monday 00:00 PT to today");
+            Ok(())
         }
         Commands::Avg(AvgArgs { num_days_back: Some(num_days_back), .. }) => {
             println!("Avg calories for {} days back", num_days_back);
+            Ok(())
         }
         Commands::Avg(AvgArgs { from: Some(from), to, .. }) => {
-            println!("Average calories burned per day from {:?} to {:?}", from, clamp_to_today(to));
+            println!("Average calories burned per day from {:?} to {:?}", from, clamp_to_today(&to));
+            Ok(())
         }
         Commands::Search(SearchArgs { food: Some(food), .. }) => {
             println!("Finding entries with food: {}...", food);
+            Ok(())
         }
         Commands::Search(SearchArgs {meal_type: Some(meal_type), .. }) => {
             println!("Finding entries with meal_type: {}...", meal_type);
+            Ok(())
         }
         Commands::Range { from, to } => {
-            println!("Printing calories from {:?} to {:?}", from, clamp_to_today(to));
+            println!("Printing calories from {:?} to {:?}", from, clamp_to_today(&to));
+            Ok(())
         }
         Commands::SyncDb => {
             println!("Sync the database with the markdown file.");
+            Ok(())
         }
         _ => unreachable!(),
     }
-
 }

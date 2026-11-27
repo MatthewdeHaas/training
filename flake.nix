@@ -26,6 +26,11 @@
       devShells.${system}.default = pkgs.mkShell {
         inputsFrom = [ self.packages.${system}.default ];
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+				packages = with pkgs; [
+					sqlite-interactive
+					clippy
+					rustfmt
+				];
         shellHook = ''
           echo "Training log"
           echo "Rust $(rustc --version | cut -d' ' -f2) 🦀"
