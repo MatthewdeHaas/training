@@ -1,17 +1,17 @@
 use std::env;
-use anyhow::Result;
 use std::path::PathBuf;
 
-pub fn food_log_path() -> Result<PathBuf> {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("logs");
-    path.push("food.md");
-    Ok(path)
+fn logs_dir() -> PathBuf {
+    if let Ok(dir) = env::var("TRAINING_LOGS_DIR") {
+        return PathBuf::from(dir);
+    }
+    PathBuf::from(env::var("HOME").expect("$HOME not set")).join("Training").join("logs")
 }
 
-pub fn training_log_path() -> Result<PathBuf> {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("logs");
-    path.push("training.md");
-    Ok(path)
+pub fn food_log_path() -> PathBuf {
+    logs_dir().join("food.md")
+}
+
+pub fn training_log_path() -> PathBuf {
+    logs_dir().join("training.md")
 }

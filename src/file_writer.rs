@@ -1,6 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::{ self, Write };
-use std::path::{ Path, PathBuf };
+use std::path::Path;
 use anyhow::{Context, Result};
 use fs2::FileExt;
 use std::str::FromStr;
@@ -44,14 +44,29 @@ pub trait LogEntry {
     fn to_markdown(&self) -> String;
 }
 
-pub fn add_log_entry<T, F>(entry: T, path_fn: F) -> Result<()>
-where
-    T: LogEntry,
-    F: FnOnce() -> Result<PathBuf>
-{
-    let log_path = path_fn()?;
+pub fn format_entry(entry_type: impl std::fmt::Display, title: &str, extras: &[String], details: Option<&str>) -> String {
+    let mut header = format!("## {} · {}", "<date + time>", entry_type);
+    for extra in extras {
+        header.push_str(" · ");
+        header.push_str(extra);
+    }
+    format!(
+        "\n{}\n\
+        {}\n\
+        \n\
+        Details:\n\
+        {}\n\
+        \n\
+        ---\n",
+        header,
+        title,
+        details.unwrap_or("(No details)")
+    )
+}
+
+pub fn add_log_entry(log_path: &Path, markdown_entry: &str) -> Result<()> {
     with_lock(&log_path.with_extension("md.lock"), || {
-        atomic_append(&log_path, entry.to_markdown().as_bytes())?;
+        atomic_append(&log_path, markdown_entry.as_bytes())?;
         Ok(())
     })?;
     println!("Logged to {}", log_path.display());

@@ -1,6 +1,8 @@
 
-## 2026-11-26 · breakfast · 123 kcal
+## 2026-11-26 · breakfast
 Chicken and rice
+
+Calories: 123 kcal
 
 Details:
 (No details)
@@ -12,5 +14,21 @@ ceral
 
 Details:
 it was yummy
+
+---
+
+## <date + time> · lunch · {}500 kcal
+eggs
+
+Details:
+it was good
+
+---
+
+## <date + time> · breakfast · 123 kcal
+asdf
+
+Details:
+fsdafsadfsadf
 
 ---

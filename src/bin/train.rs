@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use time::OffsetDateTime;
 use std::fmt;
 use std::str::FromStr;
 use training::{ file_writer, paths };
@@ -58,20 +57,13 @@ struct TrainingEntry {
     details: Option<String>
 }
 
-impl file_writer::LogEntry for TrainingEntry {
-    fn to_markdown(&self) -> String {
-        format!(
-            "\n## {} · {}\n\
-             {}\n\
-             \n\
-             Details:\n\
-             {}\n\
-             \n\
-             ---\n",
-            OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()).date(),
-            self.activity_type,
-            self.summary,
-            self.details.as_deref().unwrap_or("(No details)"),
+impl TrainingEntry {
+    pub fn to_markdown(&self) -> String {
+        file_writer::format_entry(
+            &self.activity_type,
+            &self.summary,
+            &[],
+            self.details.as_deref()
         )
     }
 }
@@ -106,21 +98,17 @@ impl FromStr for ActivityType {
 fn main() -> Result<()> {
     match Cli::parse().command {
         Commands::Add(AddArgs { activity_type: Some(activity_type), summary: Some(summary), details}) => {
-            file_writer::add_log_entry(
-                TrainingEntry { activity_type, summary, details }, 
-                paths::training_log_path
-            )?;
+            let entry = TrainingEntry { activity_type, summary, details }; 
+            file_writer::add_log_entry(&paths::training_log_path(), &entry.to_markdown())?;
             Ok(())
         }
         Commands::Add(_) => {
-            file_writer::add_log_entry(
-                TrainingEntry { 
-                    activity_type: file_writer::parse_stdin("Enter the training type (r, b, h, s, l)", true).unwrap(), 
-                    summary: file_writer::parse_stdin("", true).unwrap(), 
-                    details: file_writer::parse_stdin("Enter details about the session", false)
-                }, 
-                paths::training_log_path
-            )?;
+            let entry = TrainingEntry { 
+                activity_type: file_writer::parse_stdin("Enter the training type (r, b, h, s, l)", true).unwrap(), 
+                summary: file_writer::parse_stdin("Enter the session title", true).unwrap(), 
+                details: file_writer::parse_stdin("Enter details about the session", false)
+            }; 
+            file_writer::add_log_entry(&paths::training_log_path(), &entry.to_markdown())?;
             Ok(())
         }
         Commands::Recent { number_of_activities: _ } => { 

@@ -103,21 +103,13 @@ struct FoodEntry {
 }
 
 
-impl file_writer::LogEntry for FoodEntry {
-    fn to_markdown(&self) -> String {
-        format!(
-            "\n## {} · {} · {} kcal\n\
-             {}\n\
-             \n\
-             Details:\n\
-             {}\n\
-             \n\
-             ---\n",
-            OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()).date(),
-            self.meal_type,
-            self.kcal,
-            self.meal_name,
-            self.details.as_deref().unwrap_or("(No details)"),
+impl FoodEntry {
+    pub fn to_markdown(&self) -> String {
+        file_writer::format_entry(
+            &self.meal_type,
+            &self.meal_name,
+            &[format!("{} kcal", self.kcal)],
+            self.details.as_deref()
         )
     }
 }
@@ -162,22 +154,18 @@ fn clamp_to_today(date: &Option<Date>) -> Date {
 fn main() -> Result<()> {
     match Cli::parse().command {
         Commands::Add(AddArgs { meal_type: Some(meal_type), kcal: Some(kcal), meal_name: Some(meal_name), details }) => {
-            file_writer::add_log_entry(
-                FoodEntry { meal_type, kcal, meal_name, details }, 
-                paths::food_log_path
-            )?;
+            let entry = FoodEntry { meal_type, kcal, meal_name, details };
+            file_writer::add_log_entry(&paths::food_log_path(), &entry.to_markdown())?;
             Ok(())
         }
         Commands::Add(_) => {
-            file_writer::add_log_entry(
-                    FoodEntry { 
-                        meal_type: file_writer::parse_stdin("Enter the meal type (b, l, d, s)", true).unwrap(), 
-                        kcal: file_writer::parse_stdin("Enter number of kcal", true).unwrap(), 
-                        meal_name: file_writer::parse_stdin("Enter the name of meal", true).unwrap(), 
-                        details: file_writer::parse_stdin("Enter any details/notes on the meal", false)
-                    },
-                    paths::food_log_path
-            )?;
+            let entry = FoodEntry { 
+                meal_type: file_writer::parse_stdin("Enter the meal type (b, l, d, s)", true).unwrap(), 
+                kcal: file_writer::parse_stdin("Enter number of kcal", true).unwrap(), 
+                meal_name: file_writer::parse_stdin("Enter the name of meal", true).unwrap(), 
+                details: file_writer::parse_stdin("Enter any details/notes on the meal", false)
+            };
+            file_writer::add_log_entry(&paths::food_log_path(), &entry.to_markdown())?;
             Ok(())
         }
         Commands::Day { date } => {
