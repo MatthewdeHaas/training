@@ -3,7 +3,6 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::str::FromStr;
 use training::{ file_writer, paths };
-use time::{Date, macros::format_description };
 
 #[derive(Parser, Debug)]
 #[command(version, about = "Food/calorie logger", long_about = None)]
@@ -24,13 +23,7 @@ enum Commands {
     },
 
     /// See what you've logged this week so far
-    Week,
-
-    /// Get training entries for a given day
-    Day {
-        #[arg(short = 'd', long, value_parser = parse_date)]
-        day: Date
-    }
+    Week
 }
 
 #[derive(Args, Debug)]
@@ -72,9 +65,12 @@ impl TrainingEntry {
     }
 }
 
-fn parse_date(s: &str) -> Result<Date, time::error::Parse> {
-    let format = format_description!("[year]-[month]-[day]");
-    Date::parse(s, &format)
+impl FromStr for TrainingEntry {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!("")
+    }
 }
 
 impl fmt::Display for ActivityType {
@@ -126,10 +122,6 @@ fn main() -> Result<()> {
         }
         Commands::Week => {
             println!("Showing activities for this week..."); 
-            Ok(())
-        }
-        Commands::Day { day } => {
-            println!("Summary for {}", day);
             Ok(())
         }
     }

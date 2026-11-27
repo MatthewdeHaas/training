@@ -78,6 +78,14 @@ impl FoodEntry {
     }
 }
 
+impl FromStr for FoodEntry {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!("")
+    }
+}
+
 impl fmt::Display for MealType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
