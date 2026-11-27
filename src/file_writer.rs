@@ -1,9 +1,9 @@
 use std::fs::OpenOptions;
 use std::io::{ self, Write };
 use std::path::Path;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use fs2::FileExt;
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 use time::OffsetDateTime;
 
 fn atomic_append(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -111,4 +111,15 @@ where
             Err(e) => println!("Invalid input {}. Please try again.", e)
         }
     }
+}
+
+
+pub fn resolve<T>(value: Option<T>, label: &str) -> Result<T>
+where
+  T: FromStr,
+  T::Err: Display,
+{
+  value
+    .or_else(|| parse_stdin(label, true))
+    .ok_or_else(|| anyhow!("missing required input: {label}"))
 }

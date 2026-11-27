@@ -18,25 +18,13 @@ enum Commands {
     /// Log food. Leave empty for interactive input
     Add(AddArgs),
 
-    /// See what you logged on a given day
-    Day {
-        #[arg(value_parser = parse_date)]
-        date: Date
-    },
-
     /// See what you logged today so far
     Today,
 
     /// See what you logged this week so far
     Week,
 
-    /// See the average calories over a period of time
-    Avg(AvgArgs),
-
-    /// Search for a given food or meal type
-    Search(SearchArgs),
-
-    /// Prints data from range
+    /// Prints calories within a certain range
     Range {
         #[arg(short = 'f', long, value_parser = parse_date)]
         from: Date,
@@ -61,30 +49,6 @@ struct AddArgs {
 
     #[arg(short = 'd', long, requires_all = ["meal_type", "kcal", "meal_name"])]
     details: Option<String>
-}
-
-#[derive(Args, Debug)]
-#[group(multiple = false)]
-struct SearchArgs {
-    #[arg(short = 'f', long)]
-    food: Option<String>,
-
-    #[arg(short = 't', long)]
-    meal_type: Option<MealType>
-}
-
-#[derive(Args, Debug)]
-#[clap(group(clap::ArgGroup::new("mode").required(true).args(["num_days_back", "from"])))]
-struct AvgArgs {
-    #[arg(conflicts_with_all = ["from", "to"])]
-    num_days_back: Option<i32>,
-
-    #[arg(short = 'f', long, conflicts_with = "num_days_back", value_parser = parse_date)]
-    from: Option<Date>,
-
-    /// Uses today as the "to" date if blank
-    #[arg(short = 't', long, requires = "from", conflicts_with = "num_days_back", value_parser = parse_date)]
-    to: Option<Date>
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -153,23 +117,14 @@ fn clamp_to_today(date: &Option<Date>) -> Date {
 
 fn main() -> Result<()> {
     match Cli::parse().command {
-        Commands::Add(AddArgs { meal_type: Some(meal_type), kcal: Some(kcal), meal_name: Some(meal_name), details }) => {
-            let entry = FoodEntry { meal_type, kcal, meal_name, details };
-            file_writer::add_log_entry(&paths::food_log_path(), &entry.to_markdown())?;
-            Ok(())
-        }
-        Commands::Add(_) => {
-            let entry = FoodEntry { 
-                meal_type: file_writer::parse_stdin("Enter the meal type (b, l, d, s)", true).unwrap(), 
-                kcal: file_writer::parse_stdin("Enter number of kcal", true).unwrap(), 
-                meal_name: file_writer::parse_stdin("Enter the name of meal", true).unwrap(), 
-                details: file_writer::parse_stdin("Enter any details/notes on the meal", false)
+        Commands::Add(args) => {
+            let entry = FoodEntry {
+                meal_type: file_writer::resolve(args.meal_type, "Enter the meal type (b, l, d, s)")?,
+                kcal: file_writer::resolve(args.kcal, "Enter number of kcal")?,
+                meal_name: file_writer::resolve(args.meal_name, "Enter the name of meal")?,
+                details: args.details.or_else(|| file_writer::parse_stdin("Enter any details/notes on the meal", false)),
             };
             file_writer::add_log_entry(&paths::food_log_path(), &entry.to_markdown())?;
-            Ok(())
-        }
-        Commands::Day { date } => {
-            println!("Summary for {}", date);
             Ok(())
         }
         Commands::Today => {
@@ -180,26 +135,9 @@ fn main() -> Result<()> {
             println!("Summary for this week starting from Monday 00:00 PT to today");
             Ok(())
         }
-        Commands::Avg(AvgArgs { num_days_back: Some(num_days_back), .. }) => {
-            println!("Avg calories for {} days back", num_days_back);
-            Ok(())
-        }
-        Commands::Avg(AvgArgs { from: Some(from), to, .. }) => {
-            println!("Average calories burned per day from {:?} to {:?}", from, clamp_to_today(&to));
-            Ok(())
-        }
-        Commands::Search(SearchArgs { food: Some(food), .. }) => {
-            println!("Finding entries with food: {}...", food);
-            Ok(())
-        }
-        Commands::Search(SearchArgs {meal_type: Some(meal_type), .. }) => {
-            println!("Finding entries with meal_type: {}...", meal_type);
-            Ok(())
-        }
         Commands::Range { from, to } => {
             println!("Printing calories from {:?} to {:?}", from, clamp_to_today(&to));
             Ok(())
         }
-        _ => unreachable!(),
     }
 }

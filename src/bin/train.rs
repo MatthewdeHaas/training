@@ -3,6 +3,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::str::FromStr;
 use training::{ file_writer, paths };
+use time::{Date, macros::format_description };
 
 #[derive(Parser, Debug)]
 #[command(version, about = "Food/calorie logger", long_about = None)]
@@ -22,11 +23,14 @@ enum Commands {
         number_of_activities: Option<i32>
     },
 
-    /// See what you've logged today so far
-    Today,
-
     /// See what you've logged this week so far
-    Week
+    Week,
+
+    /// Get training entries for a given day
+    Day {
+        #[arg(short = 'd', long, value_parser = parse_date)]
+        day: Date
+    }
 }
 
 #[derive(Args, Debug)]
@@ -68,6 +72,11 @@ impl TrainingEntry {
     }
 }
 
+fn parse_date(s: &str) -> Result<Date, time::error::Parse> {
+    let format = format_description!("[year]-[month]-[day]");
+    Date::parse(s, &format)
+}
+
 impl fmt::Display for ActivityType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -97,17 +106,17 @@ impl FromStr for ActivityType {
 
 fn main() -> Result<()> {
     match Cli::parse().command {
-        Commands::Add(AddArgs { activity_type: Some(activity_type), summary: Some(summary), details}) => {
-            let entry = TrainingEntry { activity_type, summary, details }; 
-            file_writer::add_log_entry(&paths::training_log_path(), &entry.to_markdown())?;
-            Ok(())
-        }
-        Commands::Add(_) => {
-            let entry = TrainingEntry { 
-                activity_type: file_writer::parse_stdin("Enter the training type (r, b, h, s, l)", true).unwrap(), 
-                summary: file_writer::parse_stdin("Enter the session title", true).unwrap(), 
-                details: file_writer::parse_stdin("Enter details about the session", false)
-            }; 
+        Commands::Add(args) => {
+            let entry = TrainingEntry {
+                activity_type: file_writer::resolve(
+                args.activity_type,
+                "Enter the training type (r, b, h, s, l)",
+                )?,
+                summary: file_writer::resolve(args.summary, "Enter the session title")?,
+                details: args
+                .details
+                .or_else(|| file_writer::parse_stdin("Enter details about the session", false)),
+            };
             file_writer::add_log_entry(&paths::training_log_path(), &entry.to_markdown())?;
             Ok(())
         }
@@ -115,12 +124,12 @@ fn main() -> Result<()> {
             println!("Showing the most recent activities...");
             Ok(())
         }
-        Commands::Today => { 
-            println!("Showing activities for today...");
-            Ok(())
-        }
         Commands::Week => {
             println!("Showing activities for this week..."); 
+            Ok(())
+        }
+        Commands::Day { day } => {
+            println!("Summary for {}", day);
             Ok(())
         }
     }

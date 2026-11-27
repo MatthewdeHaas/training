@@ -48,3 +48,11 @@ Details:
 hmmmmmmm
 
 ---
+
+## 2026-11-27 · breakfast · 324 kcal
+asdjfh askdf
+
+Details:
+(No details)
+
+---
