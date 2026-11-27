@@ -45,27 +45,28 @@ pub trait LogEntry {
     fn to_markdown(&self) -> String;
 }
 
-pub fn format_entry(entry_type: impl std::fmt::Display, title: &str, extras: &[String], details: Option<&str>) -> String {
-    let date = OffsetDateTime::now_local()
-      .unwrap_or_else(|_| OffsetDateTime::now_utc())
-      .date();
+pub fn format_entry(
+  entry_type: impl std::fmt::Display,
+  title: &str,
+  kcal: Option<i32>,
+  details: Option<&str>,
+) -> String {
+  let date = OffsetDateTime::now_local()
+    .unwrap_or_else(|_| OffsetDateTime::now_utc())
+    .date();
 
-    let header = format!(
-      "## {date} · {entry_type}{}",
-      extras.iter().map(|e| format!(" · {e}")).collect::<String>()
-    );
-    format!(
-        "\n{}\n\
-        {}\n\
-        \n\
-        Details:\n\
-        {}\n\
-        \n\
-        ---\n",
-        header,
-        title,
-        details.unwrap_or("(No details)")
-    )
+  let kcal = kcal.map(|k| format!(" · {k} kcal")).unwrap_or_default();
+  let details = details.unwrap_or("(No details)");
+
+  format!(
+    "\n## {date} · {entry_type}{kcal}\n\
+     {title}\n\
+     \n\
+     Details:\n\
+     {details}\n\
+     \n\
+     ---\n"
+  )
 }
 
 pub fn add_log_entry(log_path: &Path, markdown_entry: &str) -> Result<()> {

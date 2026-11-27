@@ -40,3 +40,11 @@ Details:
 asfjahsd ifsadhjk sad f
 
 ---
+
+## 2026-11-27 · breakfast · 123 kcal
+eggs and bacy
+
+Details:
+hmmmmmmm
+
+---

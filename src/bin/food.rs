@@ -108,7 +108,7 @@ impl FoodEntry {
         file_writer::format_entry(
             &self.meal_type,
             &self.meal_name,
-            &[format!("{} kcal", self.kcal)],
+            Some(self.kcal),
             self.details.as_deref()
         )
     }

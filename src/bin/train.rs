@@ -62,7 +62,7 @@ impl TrainingEntry {
         file_writer::format_entry(
             &self.activity_type,
             &self.summary,
-            &[],
+            None,
             self.details.as_deref()
         )
     }
