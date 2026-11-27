@@ -4,7 +4,6 @@ use std::path::{ Path, PathBuf };
 use anyhow::{Context, Result};
 use fs2::FileExt;
 use std::str::FromStr;
-use rusqlite::Connection;
 
 fn atomic_append(path: &Path, bytes: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
@@ -43,23 +42,16 @@ where
 
 pub trait LogEntry {
     fn to_markdown(&self) -> String;
-    fn save_to_db(&self, conn: &Connection) -> Result<()>;
 }
 
-pub fn add_log_entry<T, F>(entry: T, path_fn: F, conn: &mut Connection) -> Result<()>
+pub fn add_log_entry<T, F>(entry: T, path_fn: F) -> Result<()>
 where
     T: LogEntry,
     F: FnOnce() -> Result<PathBuf>
 {
     let log_path = path_fn()?;
     with_lock(&log_path.with_extension("md.lock"), || {
-        let tx = conn.transaction().context("starting database transaction")?;
-        entry.save_to_db(&tx).context("staging entry in database")?;
-
         atomic_append(&log_path, entry.to_markdown().as_bytes())?;
-    
-        tx.commit().context("Committing database transaction")?; 
-
         Ok(())
     })?;
     println!("Logged to {}", log_path.display());

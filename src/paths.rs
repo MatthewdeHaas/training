@@ -15,10 +15,3 @@ pub fn training_log_path() -> Result<PathBuf> {
     path.push("training.md");
     Ok(path)
 }
-
-pub fn db_path() -> Result<PathBuf> {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("logs");
-    path.push("database.db");
-    Ok(path)
-}

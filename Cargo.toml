@@ -7,6 +7,5 @@ edition = "2024"
 anyhow = "1.0.105"
 clap = { version = "4.6.10", features = ["derive"] }
 fs2 = "0.4.3"
-rusqlite = { version = "0.43.0", features = ["bundled"] }
 tempfile = "3.27.0"
 time = { version = "0.3.55", features = ["parsing", "macros", "local-offset", "formatting"] }

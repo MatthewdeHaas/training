@@ -3,8 +3,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use time::OffsetDateTime;
 use std::fmt;
 use std::str::FromStr;
-use training::{ file_writer, paths, db };
-use rusqlite::Connection;
+use training::{ file_writer, paths };
 
 #[derive(Parser, Debug)]
 #[command(version, about = "Food/calorie logger", long_about = None)]
@@ -75,18 +74,6 @@ impl file_writer::LogEntry for TrainingEntry {
             self.details.as_deref().unwrap_or("(No details)"),
         )
     }
-
-    fn save_to_db(&self, conn: &Connection) -> Result<()> {
-        conn.execute(
-            "INSERT INTO training (meal_type, kcal, meal_name, details) VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![
-                self.activity_type.to_string(),
-                self.summary,
-                self.details
-            ]
-        )?;
-        Ok(())
-    }
 }
 
 impl fmt::Display for ActivityType {
@@ -117,13 +104,11 @@ impl FromStr for ActivityType {
 }
 
 fn main() -> Result<()> {
-    let mut conn = db::init_db(&paths::db_path()?)?;
     match Cli::parse().command {
         Commands::Add(AddArgs { activity_type: Some(activity_type), summary: Some(summary), details}) => {
             file_writer::add_log_entry(
                 TrainingEntry { activity_type, summary, details }, 
-                paths::training_log_path,
-                &mut conn
+                paths::training_log_path
             )?;
             Ok(())
         }
@@ -134,8 +119,7 @@ fn main() -> Result<()> {
                     summary: file_writer::parse_stdin("", true).unwrap(), 
                     details: file_writer::parse_stdin("Enter details about the session", false)
                 }, 
-                paths::training_log_path,
-                &mut conn
+                paths::training_log_path
             )?;
             Ok(())
         }

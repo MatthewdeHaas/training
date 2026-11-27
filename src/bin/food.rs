@@ -3,8 +3,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use time::{Date, macros::format_description, OffsetDateTime};
 use std::fmt;
 use std::str::FromStr;
-use training::{ file_writer, paths, db };
-use rusqlite::Connection;
+use training::{ file_writer, paths };
 
 
 #[derive(Parser, Debug)]
@@ -45,10 +44,7 @@ enum Commands {
         /// Uses today as the "to" date if blank
         #[arg(short = 't', long, requires = "from", value_parser = parse_date)]
         to: Option<Date>,
-    },
-
-    /// Sync markdown file with sql file
-    SyncDb
+    }
 }
 
 #[derive(Args, Debug)]
@@ -124,19 +120,6 @@ impl file_writer::LogEntry for FoodEntry {
             self.details.as_deref().unwrap_or("(No details)"),
         )
     }
-
-    fn save_to_db(&self, conn: &Connection) -> Result<()> {
-        conn.execute(
-            "INSERT INTO food (meal_type, kcal, meal_name, details) VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![
-                self.meal_type.to_string(),
-                self.kcal,
-                self.meal_name,
-                self.details
-            ]
-        )?;
-        Ok(())
-    }
 }
 
 impl fmt::Display for MealType {
@@ -177,13 +160,11 @@ fn clamp_to_today(date: &Option<Date>) -> Date {
 }
 
 fn main() -> Result<()> {
-    let mut conn = db::init_db(&paths::db_path()?)?;
     match Cli::parse().command {
         Commands::Add(AddArgs { meal_type: Some(meal_type), kcal: Some(kcal), meal_name: Some(meal_name), details }) => {
             file_writer::add_log_entry(
                 FoodEntry { meal_type, kcal, meal_name, details }, 
-                paths::food_log_path,
-                &mut conn
+                paths::food_log_path
             )?;
             Ok(())
         }
@@ -195,8 +176,7 @@ fn main() -> Result<()> {
                         meal_name: file_writer::parse_stdin("Enter the name of meal", true).unwrap(), 
                         details: file_writer::parse_stdin("Enter any details/notes on the meal", false)
                     },
-                    paths::food_log_path,
-                    &mut conn
+                    paths::food_log_path
             )?;
             Ok(())
         }
@@ -230,10 +210,6 @@ fn main() -> Result<()> {
         }
         Commands::Range { from, to } => {
             println!("Printing calories from {:?} to {:?}", from, clamp_to_today(&to));
-            Ok(())
-        }
-        Commands::SyncDb => {
-            println!("Sync the database with the markdown file.");
             Ok(())
         }
         _ => unreachable!(),
