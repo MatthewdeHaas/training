@@ -4,6 +4,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use fs2::FileExt;
 use std::str::FromStr;
+use time::OffsetDateTime;
 
 fn atomic_append(path: &Path, bytes: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
@@ -45,11 +46,14 @@ pub trait LogEntry {
 }
 
 pub fn format_entry(entry_type: impl std::fmt::Display, title: &str, extras: &[String], details: Option<&str>) -> String {
-    let mut header = format!("## {} · {}", "<date + time>", entry_type);
-    for extra in extras {
-        header.push_str(" · ");
-        header.push_str(extra);
-    }
+    let date = OffsetDateTime::now_local()
+      .unwrap_or_else(|_| OffsetDateTime::now_utc())
+      .date();
+
+    let header = format!(
+      "## {date} · {entry_type}{}",
+      extras.iter().map(|e| format!(" · {e}")).collect::<String>()
+    );
     format!(
         "\n{}\n\
         {}\n\

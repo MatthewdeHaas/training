@@ -32,3 +32,11 @@ Details:
 fsdafsadfsadf
 
 ---
+
+## 2026-11-27 · breakfast · 1232 kcal
+eggs and bacon
+
+Details:
+asfjahsd ifsadhjk sad f
+
+---
