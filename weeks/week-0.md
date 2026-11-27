@@ -31,15 +31,14 @@ Phase: P1 week 0/4 (reacquire)
 - Breakfast
 - Work + Lunch
 - Run: 16 km
-- Cook
 
 ### Friday 11-27
-- Run: 13 km
 - Breakfast
+- Cook
 - Purchase body weight scale
 - Work + Lunch
+- Run: 13 km
 - Dinner
-- Run: 9 km
 
 ### Saturday 11-28
 - Run: 25 km
