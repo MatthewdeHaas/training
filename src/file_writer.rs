@@ -4,7 +4,7 @@ use std::path::Path;
 use anyhow::{anyhow, Context, Result};
 use fs2::FileExt;
 use std::{fmt::Display, str::FromStr};
-use time::OffsetDateTime;
+use time::{Date};
 
 fn atomic_append(path: &Path, bytes: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
@@ -41,32 +41,21 @@ where
     result
 }
 
-pub trait LogEntry {
-    fn to_markdown(&self) -> String;
-}
-
-pub fn format_entry(
-  entry_type: impl std::fmt::Display,
-  title: &str,
-  kcal: Option<i32>,
-  details: Option<&str>,
-) -> String {
-  let date = OffsetDateTime::now_local()
-    .unwrap_or_else(|_| OffsetDateTime::now_utc())
-    .date();
-
-  let kcal = kcal.map(|k| format!(" · {k} kcal")).unwrap_or_default();
-  let details = details.unwrap_or("(No details)");
-
-  format!(
-    "\n## {date} · {entry_type}{kcal}\n\
-     {title}\n\
-     \n\
-     Details:\n\
-     {details}\n\
-     \n\
-     ---\n"
-  )
+pub fn format_entry(date: &Date, entry_type: impl std::fmt::Display, title: &str, kcal: Option<i32>, details: Option<&str>) -> String {
+    format!(
+        "\n## {} · {}{}\n\
+        {}\n\
+        \n\
+        Details:\n\
+        {}\n\
+        \n\
+        ---\n",
+        date,
+        kcal.map(|k| format!(" · {k} kcal")).unwrap_or_default(),
+        entry_type,
+        title,
+        details.unwrap_or("(No details)")
+    )
 }
 
 pub fn add_log_entry(log_path: &Path, markdown_entry: &str) -> Result<()> {
